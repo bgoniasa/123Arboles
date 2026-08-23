@@ -1,0 +1,16 @@
+.venv/
+.cache/
+__pycache__/
+*.pyc
+install_log.txt
+
+# Resultados generados al ejecutar el programa (se regeneran cada vez)
+imagen.tif
+imagen_original.png
+overlay_slider.png
+arboles_mascara.tif
+arboles_regiones.tif
+arboles.gpkg
+arboles.csv
+preview.png
+visor.html

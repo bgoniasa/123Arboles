@@ -1,0 +1,212 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<title>Contador de árboles y zonas verdes</title>
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+<link rel="stylesheet" href="https://unpkg.com/leaflet-draw@1.0.4/dist/leaflet.draw.css" />
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@500;700;800&display=swap" rel="stylesheet">
+<style>
+  html, body { margin: 0; height: 100%; font-family: 'Manrope', system-ui, sans-serif; background: #0e1b13; color: #eaf6ee; }
+  #mapa { position: absolute; top: 0; left: 0; right: 0; bottom: 0; }
+
+  #panel {
+    position: absolute; z-index: 1000; top: 18px; left: 18px;
+    max-width: 300px; padding: 18px 18px 16px;
+    background: linear-gradient(155deg, rgba(24,46,32,.82), rgba(9,18,13,.86));
+    backdrop-filter: blur(14px);
+    -webkit-backdrop-filter: blur(14px);
+    border: 1px solid rgba(140, 255, 180, .18);
+    border-radius: 16px;
+    box-shadow: 0 10px 34px rgba(0,0,0,.45), inset 0 1px 0 rgba(255,255,255,.06);
+  }
+  #panel .insignia {
+    display: inline-flex; align-items: center; justify-content: center;
+    width: 30px; height: 30px; border-radius: 9px; font-size: 1rem;
+    background: linear-gradient(140deg, #58e28a, #1a6b3c);
+    box-shadow: 0 3px 10px rgba(56, 189, 118, .35);
+    margin-bottom: 8px;
+  }
+  #panel h1 {
+    font-size: .98rem; font-weight: 800; margin: 0 0 6px; letter-spacing: .01em;
+  }
+  #panel p {
+    font-size: .78rem; line-height: 1.45; margin: 0 0 14px;
+    color: #b8d8c4;
+  }
+  #btnAnalizar {
+    width: 100%; padding: 10px 12px; border: 0; border-radius: 999px;
+    background: linear-gradient(120deg, #48d47e, #1c7a42);
+    color: #06170d; font-weight: 800; font-size: .85rem; letter-spacing: .01em;
+    cursor: pointer; transition: transform .15s ease, box-shadow .15s ease;
+    box-shadow: 0 6px 16px rgba(56, 189, 118, .3);
+  }
+  #btnAnalizar:hover:not(:disabled) { transform: translateY(-1px); box-shadow: 0 8px 20px rgba(56, 189, 118, .42); }
+  #btnAnalizar:disabled {
+    background: rgba(255,255,255,.08); color: rgba(234,246,238,.45);
+    box-shadow: none; cursor: default;
+  }
+  #estado { font-size: .76rem; margin-top: 10px; min-height: 1.2em; color: #9fd6b3; }
+  #resultado {
+    position: absolute; z-index: 1000; top: 0; right: 0; bottom: 0; width: 420px;
+    max-width: 92vw;
+    background: linear-gradient(180deg, rgba(16,36,26,.97), rgba(8,17,12,.99));
+    backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px);
+    border-left: 1px solid rgba(140, 255, 180, .14);
+    box-shadow: -10px 0 34px rgba(0,0,0,.45);
+    transform: translateX(100%); transition: transform .25s ease; overflow-y: auto;
+  }
+  #resultado.abierto { transform: translateX(0); }
+  #resultado .contenido { padding: 20px; }
+  #resultado h2 { font-size: 1.02rem; font-weight: 800; margin: 4px 0 4px; }
+  .conteo {
+    display: inline-flex; align-items: center; gap: 6px; font-size: 1rem; font-weight: 700;
+    margin: 8px 0 16px; color: #06170d;
+    background: linear-gradient(120deg, #58e28a, #1f8f4d);
+    box-shadow: 0 6px 16px rgba(56, 189, 118, .3);
+    padding: 7px 16px; border-radius: 999px;
+  }
+  .comparador {
+    position: relative; width: 100%; aspect-ratio: 1/1; overflow: hidden;
+    border-radius: 8px; touch-action: none;
+  }
+  .comparador img {
+    position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+    object-fit: cover; user-select: none; pointer-events: none;
+  }
+  .capaOverlay { clip-path: inset(0 50% 0 0); }
+  .etiqueta { position: absolute; top: 8px; padding: 3px 8px; background: rgba(0,0,0,.55); border-radius: 6px; font-size: .72rem; }
+  .izq { left: 8px; } .der { right: 8px; }
+  .linea { position: absolute; top: 0; bottom: 0; left: 50%; width: 2px; background: #fff; }
+  input[type=range] { width: 100%; margin-top: 12px; }
+  #cerrar { position: absolute; top: 10px; right: 14px; background: none; border: 0; color: #eaf6ee; font-size: 1.4rem; cursor: pointer; }
+</style>
+</head>
+<body>
+  <div id="mapa"></div>
+
+  <div id="panel">
+    <div class="insignia">🌳</div>
+    <h1>Contador de árboles / zonas verdes</h1>
+    <p>Navega a cualquier sitio de Catalunya, España o el mundo. Dibuja un rectángulo con la herramienta de la derecha del mapa y pulsa "Analizar".</p>
+    <button id="btnAnalizar" disabled>Dibuja primero un rectángulo</button>
+    <div id="estado"></div>
+  </div>
+
+  <div id="resultado">
+    <button id="cerrar">✕</button>
+    <div class="contenido">
+      <h2 id="tituloResultado">Resultado</h2>
+      <div class="conteo" id="conteo"></div>
+      <div class="comparador" id="comparador">
+        <img id="imgOriginal" alt="Imagen original">
+        <img id="imgOverlay" class="capaOverlay" alt="Detección">
+        <div class="linea"></div>
+        <div class="etiqueta izq">Original</div>
+        <div class="etiqueta der">Detección</div>
+      </div>
+      <input type="range" min="0" max="100" value="50" id="desplazador">
+    </div>
+  </div>
+
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script src="https://unpkg.com/leaflet-draw@1.0.4/dist/leaflet.draw.js"></script>
+<script>
+  const mapa = L.map('mapa').setView([41.5912, 1.5209], 8); // Catalunya
+
+  L.tileLayer('https://mt1.google.com/vt/lyrs=y&x={x}&y={y}&z={z}', {
+    attribution: 'Imágenes © Google',
+    maxZoom: 20,
+  }).addTo(mapa);
+
+  const capaDibujo = new L.FeatureGroup();
+  mapa.addLayer(capaDibujo);
+
+  const controlDibujo = new L.Control.Draw({
+    position: 'topright',
+    draw: {
+      polygon: false, polyline: false, circle: false, marker: false, circlemarker: false,
+      rectangle: { shapeOptions: { color: '#66bb6a' } },
+    },
+    edit: { featureGroup: capaDibujo, remove: true },
+  });
+  mapa.addControl(controlDibujo);
+
+  let bboxActual = null;
+  const btn = document.getElementById('btnAnalizar');
+  const estado = document.getElementById('estado');
+
+  mapa.on(L.Draw.Event.CREATED, (e) => {
+    capaDibujo.clearLayers();
+    capaDibujo.addLayer(e.layer);
+    const b = e.layer.getBounds();
+    bboxActual = { west: b.getWest(), south: b.getSouth(), east: b.getEast(), north: b.getNorth() };
+    btn.disabled = false;
+    btn.textContent = 'Analizar esta zona';
+    estado.textContent = '';
+  });
+
+  mapa.on('draw:deleted', () => {
+    bboxActual = null;
+    btn.disabled = true;
+    btn.textContent = 'Dibuja primero un rectángulo';
+  });
+
+  // Si se mueve/redimensiona el rectángulo con la herramienta de editar
+  // (el lápiz), hay que recalcular el bbox: si no, se analiza la posición
+  // vieja aunque en el mapa se vea movido.
+  mapa.on(L.Draw.Event.EDITED, (e) => {
+    e.layers.eachLayer((capa) => {
+      const b = capa.getBounds();
+      bboxActual = { west: b.getWest(), south: b.getSouth(), east: b.getEast(), north: b.getNorth() };
+    });
+    btn.disabled = false;
+    btn.textContent = 'Analizar esta zona';
+    estado.textContent = 'Rectángulo actualizado.';
+  });
+
+  const panelResultado = document.getElementById('resultado');
+  document.getElementById('cerrar').onclick = () => panelResultado.classList.remove('abierto');
+
+  const rango = document.getElementById('desplazador');
+  const capaOverlay = document.getElementById('imgOverlay');
+  rango.addEventListener('input', () => {
+    capaOverlay.style.clipPath = `inset(0 ${100 - rango.value}% 0 0)`;
+  });
+
+  btn.addEventListener('click', async () => {
+    if (!bboxActual) return;
+    btn.disabled = true;
+    btn.textContent = 'Analizando…';
+    estado.textContent = 'Descargando imagen y detectando árboles (puede tardar 1-2 min)…';
+
+    try {
+      const resp = await fetch('/analizar', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(bboxActual),
+      });
+      if (!resp.ok) {
+        const err = await resp.json().catch(() => ({}));
+        throw new Error(err.detail || `Error ${resp.status}`);
+      }
+      const datos = await resp.json();
+
+      document.getElementById('imgOriginal').src = 'data:image/png;base64,' + datos.original;
+      document.getElementById('imgOverlay').src = 'data:image/png;base64,' + datos.overlay;
+      document.getElementById('conteo').textContent = `🌳 ${datos.n_arboles} árboles detectados`;
+      rango.value = 50;
+      capaOverlay.style.clipPath = 'inset(0 50% 0 0)';
+      panelResultado.classList.add('abierto');
+      estado.textContent = '';
+    } catch (e) {
+      estado.textContent = 'Error: ' + e.message;
+    } finally {
+      btn.disabled = false;
+      btn.textContent = 'Analizar esta zona';
+    }
+  });
+</script>
+</body>
+</html>
