@@ -1,0 +1,15 @@
+🌳 Este fin de semana he montado una pequeña herramienta para contar árboles y zonas verdes a partir de imágenes de satélite, en cualquier punto de Catalunya, España o el mundo.
+
+Funciona así: navegas por un mapa interactivo, dibujas la zona que te interesa, y un modelo de IA detecta y cuenta la vegetación arbórea — sin clasificar especies, solo "¿hay árbol o no?".
+
+Tecnología detrás:
+🔹 SAM2 (Segment Anything Model 2) de Meta + GroundingDINO, para detectar y segmentar árboles a partir de un prompt de texto ("tree")
+🔹 segment-geospatial, la librería open source (MIT) de Qiusheng Wu que conecta estos modelos con datos geoespaciales
+🔹 rasterio para procesar las imágenes georreferenciadas
+🔹 FastAPI + Leaflet.js para el visor web interactivo, con un comparador de "antes/después" con desplazador
+
+Código abierto aquí 👉 https://github.com/webmasterbhl/detencionArboles
+
+#IA #TeledetecciónSatelital #OpenSource #Python #GIS #SegmentAnything
+
+Ajusta el tono o acórtalo si quieres — dime si prefieres algo más técnico, más casual, o sin emojis.

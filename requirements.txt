@@ -1,0 +1,6 @@
+segment-geospatial[samgeo2]
+groundingdino-py
+leafmap
+localtileserver
+transformers<5
+geopy
